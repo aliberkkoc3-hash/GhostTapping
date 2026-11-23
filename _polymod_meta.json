@@ -1,0 +1,20 @@
+
+{
+    "id": "ghosttapping",
+    "title": "GhostTapping",
+    "description": "Toggleable GhostTapping module for FNF V-Slice 0.8.6.",
+    "author": "GhostTapping",
+    "contributors": [
+        {
+            "name": "GhostTapping",
+            "role": "Developer"
+        }
+    ],
+    "api_version": "0.8.6",
+    "mod_version": "0.0.1",
+    "license": "MIT",
+    "dependencies": {},
+    "supported_api_versions": [
+        "0.8.6"
+    ]
+}

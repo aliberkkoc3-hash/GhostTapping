@@ -1,0 +1,159 @@
+
+import funkin.modding.module.Module;
+import funkin.modding.events.ScriptEvent;
+import funkin.modding.events.ScriptEvent.GhostMissNoteScriptEvent;
+import funkin.modding.events.ScriptEvent.UpdateScriptEvent;
+import funkin.save.Save;
+import flixel.FlxG;
+import flixel.FlxState;
+import flixel.FlxSprite;
+import flixel.text.FlxText;
+import flixel.text.FlxTextBorderStyle;
+import flixel.tweens.FlxEase;
+import flixel.tweens.FlxTween;
+import flixel.util.FlxTimer;
+import funkin.play.PlayState;
+import funkin.Paths;
+
+class GhostTapping extends Module
+{
+    static inline var SAVE_KEY:String = "GhostTappingEnabled";
+
+    var ghostTappingEnabled:Bool = true;
+    var statusBackground:FlxSprite;
+    var statusText:FlxText;
+    var statusTimer:FlxTimer;
+    var statusIntro:FlxTween;
+    var statusTextIntro:FlxTween;
+    var statusFade:FlxTween;
+    var statusTextFade:FlxTween;
+    var statusState:FlxState;
+
+    public function new()
+    {
+        super("GhostTapping");
+    }
+
+    override function onCreate(event:ScriptEvent):Void
+    {
+        super.onCreate(event);
+
+        var savedValue = Save.instance.modOptions.get(SAVE_KEY);
+        if (savedValue == null)
+        {
+            Save.instance.modOptions.set(SAVE_KEY, true);
+            Save.instance.flush();
+            ghostTappingEnabled = true;
+        }
+        else
+        {
+            ghostTappingEnabled = savedValue == true;
+        }
+
+        showStatusBubble();
+    }
+
+    override function onUpdate(event:UpdateScriptEvent):Void
+    {
+        super.onUpdate(event);
+
+        if (FlxG.keys.justPressed.F7)
+        {
+            setGhostTappingEnabled(!ghostTappingEnabled);
+        }
+    }
+
+    override function onNoteGhostMiss(
+        event:GhostMissNoteScriptEvent
+    ):Void
+    {
+        super.onNoteGhostMiss(event);
+
+        if (ghostTappingEnabled)
+        {
+            event.cancel();
+        }
+    }
+
+    function setGhostTappingEnabled(value:Bool):Void
+    {
+        ghostTappingEnabled = value;
+
+        Save.instance.modOptions.set(SAVE_KEY, ghostTappingEnabled);
+        Save.instance.flush();
+
+        showStatusBubble();
+    }
+
+    function showStatusBubble():Void
+    {
+        var state:FlxState = FlxG.state;
+        if (state == null) return;
+
+        if (statusTimer != null) statusTimer.cancel();
+        if (statusIntro != null) statusIntro.cancel();
+        if (statusTextIntro != null) statusTextIntro.cancel();
+        if (statusFade != null) statusFade.cancel();
+        if (statusTextFade != null) statusTextFade.cancel();
+        if (statusBackground != null)
+        {
+            if (statusState != null) statusState.remove(statusBackground, true);
+            statusBackground.destroy();
+        }
+        if (statusText != null)
+        {
+            if (statusState != null) statusState.remove(statusText, true);
+            statusText.destroy();
+        }
+
+        statusState = state;
+        var message = ghostTappingEnabled ? "GHOST TAPPING AKTIF" : "GHOST TAPPING AKTIF DEGIL";
+        var messageColor = ghostTappingEnabled ? 0xFF55FF77 : 0xFFFF5555;
+        var bubbleWidth = 340;
+        var bubbleX = (FlxG.width - bubbleWidth) / 2;
+
+        statusBackground = new FlxSprite(bubbleX, 32).makeGraphic(bubbleWidth, 52, 0xDD101018);
+        statusBackground.y -= 12;
+        statusBackground.alpha = 0;
+        statusText = new FlxText(bubbleX, 42, bubbleWidth, message, 24);
+        statusText.y -= 12;
+        statusText.alpha = 0;
+        statusText.setFormat(Paths.font("vcr.ttf"), 24, messageColor, "center", FlxTextBorderStyle.OUTLINE, 0xFF000000);
+        statusText.borderSize = 2;
+
+        statusBackground.scrollFactor.set(0, 0);
+        statusText.scrollFactor.set(0, 0);
+        var bubbleCamera = FlxG.camera;
+        if (Std.isOfType(state, PlayState)) bubbleCamera = PlayState.instance.camHUD;
+        statusBackground.cameras = [bubbleCamera];
+        statusText.cameras = [bubbleCamera];
+
+        state.add(statusBackground);
+        state.add(statusText);
+
+        statusIntro = FlxTween.tween(statusBackground, {alpha: 1, y: 32}, 0.25, {ease: FlxEase.backOut});
+        statusTextIntro = FlxTween.tween(statusText, {alpha: 1, y: 42}, 0.25, {ease: FlxEase.backOut});
+
+        statusTimer = new FlxTimer().start(1.8, function(_)
+        {
+            statusFade = FlxTween.tween(statusBackground, {alpha: 0}, 0.3, {
+                onComplete: function(_)
+                {
+                    state.remove(statusBackground, true);
+                    state.remove(statusText, true);
+                    statusBackground.destroy();
+                    statusText.destroy();
+                    statusBackground = null;
+                    statusText = null;
+                    statusTimer = null;
+                    statusIntro = null;
+                    statusTextIntro = null;
+                    statusFade = null;
+                    statusTextFade = null;
+                    statusState = null;
+                }
+            });
+            statusTextFade = FlxTween.tween(statusText, {alpha: 0}, 0.3);
+        });
+    }
+}
